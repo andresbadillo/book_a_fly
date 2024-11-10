@@ -1,0 +1,17 @@
+.Welcome {
+  display: flex;
+  flex-direction: column;
+}
+  
+.Welcome-cancel {
+    margin-left: auto;
+}
+
+.button {
+  background-color: #293684;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 8px;
+  color: white;
+  font-weight: bold;
+}
