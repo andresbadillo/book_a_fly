@@ -76,6 +76,7 @@ export const bookingMachine = createMachine(
           DONE: [
             {
               target: "tickets",
+              guard: "moreThanOnePassenger",
               actions: [],
             },
           ],
@@ -121,7 +122,11 @@ export const bookingMachine = createMachine(
               }),
     },
     services: {},
-    guards: {},
+    guards: {
+      moreThanOnePassenger: ({context}) => {
+        return context.passengers.length > 0;
+      }
+    },
     delays: {},
   },
 );
