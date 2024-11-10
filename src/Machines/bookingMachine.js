@@ -1,36 +1,35 @@
-import { assign, createMachine } from "xstate";
+import { assign, createMachine, fromPromise } from "xstate";
+import { fetchCountries } from "../Utils/api";
 
 export const fillCountries = {
   id: "fill countries",
   initial: "loading",
   states: {
     loading: {
-        on: {
-          DONE: [
-            {
-              target: "success",
-              actions: [],
-            },
-          ],
-          ERROR: [
-            {
-              target: "failure",
-              actions: [],
-            },
-          ],
+      invoke: {
+        id: 'getCountries',
+        src: fromPromise(() => fetchCountries()),
+        onDone: {
+          target: 'success',
+          actions: assign({ countries: ({ context, event }) => event.output }),
+        },
+        onError: {
+          target: 'failure',
+          actions: assign({ error: 'Falló el request' }),
         },
       },
-      success: {},
-      failure: {
-        on: {
-          RETRY: [
-            {
-              target: "loading",
-              actions: [],
-            },
-          ],
-        },
-      }
+    },
+    success: {},
+    failure: {
+      on: {
+        RETRY: [
+          {
+            target: "loading",
+            actions: [],
+          },
+        ],
+      },
+    }
   }
 }
 
@@ -41,6 +40,8 @@ export const bookingMachine = createMachine(
     context: {
       passengers: [],
       selectedCountry: '',
+      countries: [],
+      error: '',
     },
     states: {
       initial: {
@@ -48,25 +49,17 @@ export const bookingMachine = createMachine(
           START: [
             {
               target: "search",
-              actions: ['imprimirInicio'],
+              actions: [],
             },
           ],
         },
       },
       search: {
-        entry: {
-          type: "imprimirEntrada",
-        },
-        exit: {
-          type: "imprimirSalida",
-        },
         on: {
           CONTINUE: [
             {
               target: "passengers",
-              actions: [assign({
-                selectedCountry: ({context, event}) => event.selectedCountry
-              })],
+              actions: assign({selectedCountry: ({context, event}) => event.selectedCountry}),
             },
           ],
           CANCEL: [
@@ -89,23 +82,24 @@ export const bookingMachine = createMachine(
           CANCEL: [
             {
               target: "initial",
-              actions: [assign({
-                selectedCountry: ({context, event}) => '',
-                passengers: ({context, event}) => [],
-              })],
+              actions: ['cleanContext'],
             },
           ],
           ADD: [
             {
               target: "passengers",
-              actions: [assign(
-                ({context, event}) => context.passengers.push(event.newPassenger)
-              )],
+              actions: assign(({context, event}) => context.passengers.push(event.newPassenger)),
             },
           ],
         },
       },
       tickets: {
+        after: {
+          8000: {
+            target: "initial",
+            actions: ['cleanContext'],
+          }
+        },
         on: {
           FINISH: [
             {
@@ -121,9 +115,10 @@ export const bookingMachine = createMachine(
   },
   {
     actions: {
-      imprimirInicio: () => console.log('Imprimir inicio'),
-      imprimirEntrada: () => console.log('Imprimir entrada a Search'),
-      imprimirSalida: () => console.log('Imprimir salida del search'),
+      cleanContext: assign({
+                selectedCountry: ({context, event}) => '',
+                passengers: ({context, event}) => [],
+              }),
     },
     services: {},
     guards: {},
