@@ -1,26 +1,72 @@
-import { createMachine } from "xstate";
+import { assign, createMachine } from "xstate";
+
+export const fillCountries = {
+  id: "fill countries",
+  initial: "loading",
+  states: {
+    loading: {
+        on: {
+          DONE: [
+            {
+              target: "success",
+              actions: [],
+            },
+          ],
+          ERROR: [
+            {
+              target: "failure",
+              actions: [],
+            },
+          ],
+        },
+      },
+      success: {},
+      failure: {
+        on: {
+          RETRY: [
+            {
+              target: "loading",
+              actions: [],
+            },
+          ],
+        },
+      }
+  }
+}
 
 export const bookingMachine = createMachine(
   {
     id: "buy plane tickets",
     initial: "initial",
+    context: {
+      passengers: [],
+      selectedCountry: '',
+    },
     states: {
       initial: {
         on: {
           START: [
             {
               target: "search",
-              actions: [],
+              actions: ['imprimirInicio'],
             },
           ],
         },
       },
       search: {
+        entry: {
+          type: "imprimirEntrada",
+        },
+        exit: {
+          type: "imprimirSalida",
+        },
         on: {
           CONTINUE: [
             {
               target: "passengers",
-              actions: [],
+              actions: [assign({
+                selectedCountry: ({context, event}) => event.selectedCountry
+              })],
             },
           ],
           CANCEL: [
@@ -30,6 +76,7 @@ export const bookingMachine = createMachine(
             },
           ],
         },
+        ...fillCountries,
       },
       passengers: {
         on: {
@@ -42,7 +89,18 @@ export const bookingMachine = createMachine(
           CANCEL: [
             {
               target: "initial",
-              actions: [],
+              actions: [assign({
+                selectedCountry: ({context, event}) => '',
+                passengers: ({context, event}) => [],
+              })],
+            },
+          ],
+          ADD: [
+            {
+              target: "passengers",
+              actions: [assign(
+                ({context, event}) => context.passengers.push(event.newPassenger)
+              )],
             },
           ],
         },
@@ -62,7 +120,11 @@ export const bookingMachine = createMachine(
     preserveActionOrder: true,
   },
   {
-    actions: {},
+    actions: {
+      imprimirInicio: () => console.log('Imprimir inicio'),
+      imprimirEntrada: () => console.log('Imprimir entrada a Search'),
+      imprimirSalida: () => console.log('Imprimir salida del search'),
+    },
     services: {},
     guards: {},
     delays: {},
